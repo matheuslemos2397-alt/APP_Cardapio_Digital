@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#e63946" />
+  <meta name="description" content="Cardápio digital com pedidos direto pelo WhatsApp." />
+  <title>Cardápio Digital</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Cabeçalho -->
+  <header class="header">
+    <div class="header__brand">
+      <h1 class="header__title">Sabor Local</h1>
+      <p class="header__subtitle">Delivery • Pedido direto no WhatsApp</p>
+    </div>
+    <span class="header__badge">🕒 30–50 min</span>
+  </header>
+
+  <!-- Filtro de categorias (gerado via JS) -->
+  <nav id="categorias" class="categorias" aria-label="Categorias"></nav>
+
+  <!-- Catálogo de produtos -->
+  <main id="catalogo" class="catalogo"></main>
+
+  <!-- Botão flutuante do carrinho -->
+  <button id="btnCarrinho" class="fab" aria-label="Abrir carrinho">
+    🛒 <span id="fabCount" class="fab__count">0</span>
+  </button>
+
+  <!-- Modal do carrinho -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal__overlay" data-fechar></div>
+    <div class="modal__conteudo" role="dialog" aria-modal="true" aria-label="Seu carrinho">
+      <div class="modal__header">
+        <h2>Seu Pedido</h2>
+        <button class="modal__fechar" data-fechar aria-label="Fechar">✕</button>
+      </div>
+
+      <div id="itensCarrinho" class="modal__itens"></div>
+
+      <div class="modal__total">
+        <span>Total</span>
+        <strong id="totalCarrinho">R$ 0,00</strong>
+      </div>
+
+      <form id="formCheckout" class="checkout">
+        <label>
+          Nome*
+          <input type="text" id="campoNome" placeholder="Seu nome" required />
+        </label>
+        <label>
+          Endereço de entrega*
+          <input type="text" id="campoEndereco" placeholder="Rua, número, bairro" required />
+        </label>
+        <label>
+          Pagamento
+          <select id="campoPagamento">
+            <option value="Pix">Pix</option>
+            <option value="Cartão (entrega)">Cartão na entrega</option>
+            <option value="Dinheiro">Dinheiro</option>
+          </select>
+        </label>
+        <label id="campoTrocoWrapper">
+          Troco para quanto?
+          <input type="text" id="campoTroco" placeholder="Ex.: R$ 100,00 (deixe vazio se não precisa)" />
+        </label>
+
+        <button type="submit" class="btn btn--whatsapp">
+          📲 Enviar pedido no WhatsApp
+        </button>
+        <p class="checkout__aviso">Você será redirecionado para o WhatsApp do lojista.</p>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
