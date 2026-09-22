@@ -54,6 +54,14 @@ body {
   white-space: nowrap;
 }
 
+.header__teste {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff; text-decoration: none;
+  border-radius: 999px; padding: 6px 12px; font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* ---------- Busca ---------- */
 .busca {
   position: sticky; top: 0; z-index: 9;
