@@ -239,10 +239,12 @@
 
     $("#btnAcompanhar").addEventListener("click", acompanhar);
 
-    // Se abriu com ?codigo=1234 na URL (link do checkout), inicia sozinho
+    // Prioridade: 1) ?codigo= na URL  2) código salvo no aparelho (último pedido)
     const codigoDaUrl = new URLSearchParams(location.search).get("codigo");
-    if (codigoDaUrl) {
-      $("#codigo").value = codigoDaUrl.toUpperCase();
+    const codigoSalvo = localStorage.getItem("meu-codigo-rastreio");
+    const codigoInicial = codigoDaUrl || codigoSalvo;
+    if (codigoInicial) {
+      $("#codigo").value = codigoInicial.toUpperCase();
       acompanhar();
     }
   </script>

@@ -85,14 +85,13 @@
     <div id="listaEntregas"><p class="vazio">Nenhuma entrega atribuída ainda.</p></div>
   </div>
 
-  <!-- GPS / rastreio -->
+  <!-- GPS / rastreio (automático — sem botões) -->
   <div class="cartao">
-    <button id="btnRastreio" class="btn-on" disabled>▶ Iniciar rastreio (GPS)</button>
-    <div id="status" class="status">Rastreio parado</div>
+    <div id="status" class="status">O rastreio liga sozinho ao confirmar a retirada.</div>
     <div id="coords" class="coords">—</div>
     <div id="avisoRastreio" class="aviso-rastreio" hidden>
-      ⚠️ <strong>Mantenha este app aberto na tela</strong> enquanto entrega.
-      Se minimizar ou trocar de app, o GPS pausa (e volta sozinho ao retornar).
+      ⚠️ <strong>Rastreio ativo — mantenha este app aberto na tela.</strong>
+      Ele desliga sozinho quando você confirmar a entrega.
     </div>
   </div>
 
@@ -135,7 +134,6 @@
       motoboy = data;
       localStorage.setItem(STORAGE_QUEM, id);
       $("#motoInfo").textContent = data ? `🏍️ ${data.nome} • moto: ${data.moto}` : "";
-      $("#btnRastreio").disabled = !data;
       await carregarEntregas();
       escutarNovasEntregas();
     }
@@ -248,7 +246,6 @@
       ligarTela();
       $("#avisoRastreio").hidden = false;
       setStatus(`Rastreio ATIVO — pedido #${codigo} 🔒 (tela permanece ligada)`, true);
-      $("#btnRastreio").textContent = "■ Parar rastreio";
     }
 
     function pararRastreio() {
@@ -256,9 +253,8 @@
       if (canal) { canal.unsubscribe(); canal = null; }
       desligarTela();
       $("#avisoRastreio").hidden = true;
-      setStatus("Rastreio parado");
       $("#coords").textContent = "—";
-      $("#btnRastreio").textContent = "▶ Iniciar rastreio (GPS)";
+      setStatus("Rastreio desligado.");
     }
 
     // Voltou pra aba/app? Religa tela e GPS se o rastreio deveria estar ativo
@@ -288,8 +284,6 @@
 
     /* ---------- Eventos ---------- */
     $("#selectMotoboy").addEventListener("change", (e) => e.target.value && escolherMotoboy(e.target.value));
-    $("#btnRastreio").addEventListener("click", () =>
-      watchId !== null ? pararRastreio() : iniciarRastreio());
 
     carregarMotoboys();
   </script>
