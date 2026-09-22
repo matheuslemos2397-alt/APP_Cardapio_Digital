@@ -9,6 +9,11 @@ const CONFIG = {
   pedidoMinimo: 0,           // 0 = sem mínimo
 };
 
+/* --- SUPABASE: onde os pedidos ficam salvos --- */
+const SUPABASE_URL = "https://avvgvzrnfjqofgfihibz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2dmd2enJuZmpxb2ZnZmloaWJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTEzMTMsImV4cCI6MjEwNTY2NzMxM30.SozpWD35snTiYEnwslrktTT6lm5-ilNJ6tSCOtDqpU4";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 /* ============================================================
    PRODUTOS — edite o array abaixo (id, nome, descricao, preco, img, categoria)
    ============================================================ */
@@ -300,7 +305,11 @@ document.addEventListener("keydown", (e) => {
 /* ============================================================
    CHECKOUT — WHATSAPP
    ============================================================ */
-function finalizarPedido(event) {
+function gerarCodigo() {
+  return String(Math.floor(1000 + Math.random() * 9000)); // 4 dígitos
+}
+
+async function finalizarPedido(event) {
   event.preventDefault();
 
   if (totalItens() === 0) {
@@ -318,13 +327,42 @@ function finalizarPedido(event) {
   const pagamento = $("#campoPagamento").value;
   const troco = $("#campoTroco").value.trim();
 
-  const linhas = Object.entries(carrinho).map(([id, qtd]) => {
+  const itens = Object.entries(carrinho).map(([id, qtd]) => {
     const p = produtoPorId(id);
-    return `▪ ${qtd}x ${p.nome} — ${formatarPreco(p.preco * qtd)}`;
+    return { nome: p.nome, qtd, preco: p.preco };
   });
+
+  const codigo = gerarCodigo();
+  const linkRastreio = `${location.origin}${location.pathname.replace(/[^/]*$/, "")}rastreio/viewer.html?codigo=${codigo}`;
+
+  // 1) Grava o pedido no Supabase (a loja vê em tempo real)
+  const { error } = await sb.from("pedidos").insert({
+    codigo,
+    cliente_nome: nome,
+    cliente_endereco: endereco,
+    cliente_obs: obs || null,
+    pagamento,
+    troco: troco || null,
+    itens,
+    subtotal: subtotal(),
+    taxa: CONFIG.taxaEntrega,
+    total: totalValor(),
+  });
+
+  if (error) {
+    console.error(error);
+    toast("Erro ao salvar o pedido — tente novamente");
+    return;
+  }
+
+  // 2) Monta a mensagem do WhatsApp (como antes, + código de rastreio)
+  const linhas = itens.map(
+    (i) => `▪ ${i.qtd}x ${i.nome} — ${formatarPreco(i.preco * i.qtd)}`
+  );
 
   const mensagem = [
     `🍔 *NOVO PEDIDO — ${CONFIG.nomeLoja.toUpperCase()}*`,
+    `🔖 *Código:* ${codigo}`,
     ``,
     `👤 *Cliente:* ${nome}`,
     `📍 *Endereço:* ${endereco}`,
@@ -342,8 +380,19 @@ function finalizarPedido(event) {
     .filter(Boolean)
     .join("\n");
 
-  const url = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-  window.open(url, "_blank");
+  // 3) Abre o WhatsApp do lojista
+  window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
+
+  // 4) Mostra o link de rastreio pro cliente
+  toast(`Pedido ${codigo} enviado! Acompanhe em: Rastreio no topo ⬆️`);
+  $("#linkRastreio").href = linkRastreio;
+  $("#linkRastreio").hidden = false;
+
+  // 5) Limpa o carrinho
+  carrinho = {};
+  salvarCarrinho();
+  atualizarUI();
+  fecharModal();
 }
 
 /* ============================================================

@@ -261,6 +261,10 @@ body {
 }
 .checkout input:focus, .checkout select:focus { outline: 2px solid var(--cor-primaria); background: #fff; }
 .checkout__aviso { text-align: center; font-size: 0.75rem; color: var(--cor-texto-suave); }
+.btn--rastreio {
+  display: block; text-align: center; text-decoration: none;
+  background: var(--cor-texto); color: #fff; margin-top: 0;
+}
 
 /* ---------- Toast ---------- */
 .toast {
