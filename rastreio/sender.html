@@ -67,8 +67,8 @@
     <div id="coords" class="coords">—</div>
 
     <div id="avisoDemo" class="aviso-demo" hidden>
-      ⚠️ <strong>Modo simulação:</strong> Supabase ainda não configurado neste arquivo.
-      Enviando uma rota simulada (funciona entre abas do mesmo navegador).
+      ⚠️ <strong>Modo local:</strong> Supabase ainda não configurado. Usando seu <strong>GPS real</strong>,
+      transmitido entre abas deste mesmo navegador.
     </div>
   </div>
 
@@ -121,9 +121,9 @@
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         canal = sb.channel("rastreio-" + codigo);
         canal.subscribe((s) => setStatus(s === "SUBSCRIBED" ? "Rastreio ativo (Supabase)" : "Conectando...", s === "SUBSCRIBED"));
+        $("#avisoDemo").hidden = true;
       } else {
         $("#avisoDemo").hidden = false;
-        setStatus("Rastreio ativo (simulação)", true);
       }
 
       if (navigator.geolocation && usarSupabase) {
@@ -135,8 +135,18 @@
       } else if (usarSupabase) {
         setStatus("Este aparelho não tem GPS");
         return;
+      } else if (navigator.geolocation) {
+        // Modo teste SEM Supabase: usa o GPS REAL e grava no localStorage
+        // (a aba do cliente no mesmo navegador escuta a mudança).
+        setStatus("Rastreio ativo (GPS real, modo local)", true);
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => enviarPosicao(pos.coords.latitude, pos.coords.longitude),
+          (erro) => setStatus("Erro no GPS: " + erro.message),
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
       } else {
-        // Simulação: ponto andando numa "rota" a partir de Manaus, a cada 2s
+        // Último recurso: aparelho sem GPS → rota simulada em Manaus
+        setStatus("Sem GPS no aparelho — usando simulação");
         let lat = -3.1190, lng = -60.0217, passo = 0;
         demoTimer = setInterval(() => {
           passo += 0.0004;
