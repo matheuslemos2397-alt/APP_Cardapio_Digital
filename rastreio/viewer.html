@@ -90,16 +90,28 @@
 
     /* Motinha em SVG — vira na direção do movimento */
     const SVG_MOTO = `
-      <svg viewBox="0 0 64 64" width="44" height="44">
-        <g transform="rotate(90 32 32)">
-          <circle cx="14" cy="46" r="9" fill="#1c1c1e"/>
-          <circle cx="50" cy="46" r="9" fill="#1c1c1e"/>
-          <circle cx="14" cy="46" r="4" fill="#bbb"/>
-          <circle cx="50" cy="46" r="4" fill="#bbb"/>
-          <path d="M14 46 L26 28 L44 28 L50 46" stroke="#1faa59" stroke-width="5" fill="none" stroke-linecap="round"/>
-          <circle cx="35" cy="22" r="7" fill="#1faa59"/>
-          <rect x="22" y="18" width="14" height="5" rx="2.5" fill="#1c1c1e"/>
-          <line x1="47" y1="26" x2="53" y2="18" stroke="#1c1c1e" stroke-width="4" stroke-linecap="round"/>
+      <svg viewBox="0 0 64 64" width="48" height="48">
+        <g transform="rotate(-90 32 32)">
+          <!-- rodas -->
+          <circle cx="16" cy="48" r="10" fill="#1c1c1e"/>
+          <circle cx="50" cy="48" r="10" fill="#1c1c1e"/>
+          <circle cx="16" cy="48" r="4.5" fill="#9a9a9a"/>
+          <circle cx="50" cy="48" r="4.5" fill="#9a9a9a"/>
+          <!-- garfo dianteiro + guidão -->
+          <line x1="53" y1="44" x2="47" y2="26" stroke="#1c1c1e" stroke-width="4" stroke-linecap="round"/>
+          <path d="M43 24 L47 22 L52 26" stroke="#1c1c1e" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- farol -->
+          <circle cx="50" cy="29" r="4" fill="#ffd60a" stroke="#1c1c1e" stroke-width="2"/>
+          <!-- tanque + banco -->
+          <path d="M22 32 Q32 24 42 30 L40 36 Q30 33 24 37 Z" fill="#1faa59"/>
+          <rect x="10" y="32" width="14" height="6" rx="3" fill="#1c1c1e"/>
+          <!-- motor -->
+          <circle cx="30" cy="42" r="7" fill="#3a3a3c"/>
+          <circle cx="30" cy="42" r="3" fill="#9a9a9a"/>
+          <!-- escapamento -->
+          <path d="M30 46 L18 50" stroke="#9a9a9a" stroke-width="4" stroke-linecap="round"/>
+          <!-- quadro -->
+          <path d="M16 46 L30 42 L50 46" stroke="#1faa59" stroke-width="3.5" fill="none" stroke-linecap="round"/>
         </g>
       </svg>`;
 
@@ -107,8 +119,8 @@
       L.divIcon({
         className: "marcador-moto",
         html: `<div style="transform: rotate(${rotacao}deg); transition: transform .6s ease;">${SVG_MOTO}</div>`,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
       });
 
     /* Direção (bearing) entre dois pontos, em graus */
@@ -119,7 +131,7 @@
       const x =
         Math.cos(a[0] * rad) * Math.sin(b[0] * rad) -
         Math.sin(a[0] * rad) * Math.cos(b[0] * rad) * Math.cos(dLng);
-      return (Math.atan2(y, x) * 180) / Math.PI + 90; // +90: a moto "olha" pra frente
+      return (Math.atan2(y, x) * 180) / Math.PI; // 0° = norte, cresce no sentido horário
     }
 
     function setStatus(txt, ativo = false) {
