@@ -189,6 +189,13 @@
     }
 
     $("#btnAcompanhar").addEventListener("click", acompanhar);
+
+    // Se abriu com ?codigo=1234 na URL (link do checkout), inicia sozinho
+    const codigoDaUrl = new URLSearchParams(location.search).get("codigo");
+    if (codigoDaUrl) {
+      $("#codigo").value = codigoDaUrl.toUpperCase();
+      acompanhar();
+    }
   </script>
 </body>
 </html>
