@@ -4,13 +4,13 @@
 const CONFIG = {
   whatsapp: "5592993168201", // DDI+DDD+número, só dígitos
   nomeLoja: "Sabor Local",
-  emailContato: "contato@saborlocal.com.br",
   moeda: "BRL",
+  taxaEntrega: 5.0,          // 0 = entrega grátis
+  pedidoMinimo: 0,           // 0 = sem mínimo
 };
 
 /* ============================================================
    PRODUTOS — edite o array abaixo (id, nome, descricao, preco, img, categoria)
-   Dica: use fotos do próprio cliente hospedadas em qualquer CDN/Imgur.
    ============================================================ */
 const PRODUTOS = [
   {
@@ -64,10 +64,31 @@ const PRODUTOS = [
 ];
 
 /* ============================================================
-   ESTADO
+   ESTADO — carrinho persistido no navegador do cliente
    ============================================================ */
-let carrinho = {};        // { idProduto: quantidade }
+const STORAGE_KEY = "carrinho-sabor-local";
+
+function carregarCarrinho() {
+  try {
+    const dados = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    // Remove ids que não existem mais no cardápio
+    return Object.fromEntries(
+      Object.entries(dados).filter(
+        ([id, qtd]) => PRODUTOS.some((p) => p.id === Number(id)) && qtd > 0
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+let carrinho = carregarCarrinho();
 let categoriaAtiva = "Todos";
+let termoBusca = "";
+
+function salvarCarrinho() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(carrinho));
+}
 
 /* ============================================================
    UTILITÁRIOS
@@ -77,11 +98,25 @@ const formatarPreco = (valor) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: CONFIG.moeda });
 
 const totalItens = () => Object.values(carrinho).reduce((s, q) => s + q, 0);
-const totalValor = () =>
+const subtotal = () =>
   Object.entries(carrinho).reduce((soma, [id, qtd]) => {
     const produto = PRODUTOS.find((p) => p.id === Number(id));
     return produto ? soma + produto.preco * qtd : soma;
   }, 0);
+const totalValor = () =>
+  subtotal() > 0 ? subtotal() + CONFIG.taxaEntrega : 0;
+
+const produtoPorId = (id) => PRODUTOS.find((p) => p.id === Number(id));
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(mensagem) {
+  const el = $("#toast");
+  el.textContent = mensagem;
+  el.classList.add("toast--visivel");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("toast--visivel"), 2200);
+}
 
 /* ============================================================
    RENDERIZAÇÃO — CATEGORIAS
@@ -107,13 +142,34 @@ function renderizarCategorias() {
 }
 
 /* ============================================================
-   RENDERIZAÇÃO — CATÁLOGO
+   RENDERIZAÇÃO — CATÁLOGO (com stepper no próprio card)
    ============================================================ */
+function cardRodape(p) {
+  const qtd = carrinho[p.id] || 0;
+  if (qtd === 0) {
+    return `<button class="btn btn--add" data-add="${p.id}">Adicionar</button>`;
+  }
+  return `
+    <div class="stepper" data-stepper="${p.id}">
+      <button data-delta="-1" data-id="${p.id}" aria-label="Remover um">−</button>
+      <span>${qtd}</span>
+      <button data-delta="1" data-id="${p.id}" aria-label="Adicionar um">+</button>
+    </div>`;
+}
+
 function renderizarCatalogo() {
-  const lista =
-    categoriaAtiva === "Todos"
-      ? PRODUTOS
-      : PRODUTOS.filter((p) => p.categoria === categoriaAtiva);
+  const termo = termoBusca.trim().toLowerCase();
+  const lista = PRODUTOS.filter((p) => {
+    const bateCategoria =
+      categoriaAtiva === "Todos" || p.categoria === categoriaAtiva;
+    const bateBusca =
+      !termo ||
+      p.nome.toLowerCase().includes(termo) ||
+      p.descricao.toLowerCase().includes(termo);
+    return bateCategoria && bateBusca;
+  });
+
+  $("#semResultados").hidden = lista.length > 0;
 
   $("#catalogo").innerHTML = lista
     .map(
@@ -125,7 +181,7 @@ function renderizarCatalogo() {
           <p class="card__desc">${p.descricao}</p>
           <div class="card__rodape">
             <span class="card__preco">${formatarPreco(p.preco)}</span>
-            <button class="btn btn--add" data-add="${p.id}">Adicionar</button>
+            ${cardRodape(p)}
           </div>
         </div>
       </article>`
@@ -135,6 +191,11 @@ function renderizarCatalogo() {
   document.querySelectorAll("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => adicionar(Number(btn.dataset.add)));
   });
+  document.querySelectorAll("#catalogo [data-delta]").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      alterarQuantidade(Number(btn.dataset.id), Number(btn.dataset.delta))
+    );
+  });
 }
 
 /* ============================================================
@@ -142,18 +203,35 @@ function renderizarCatalogo() {
    ============================================================ */
 function adicionar(id) {
   carrinho[id] = (carrinho[id] || 0) + 1;
+  salvarCarrinho();
   atualizarUI();
-  abrirModal(); // UX padrão dos cardápios de mercado: já abre o carrinho
+  const p = produtoPorId(id);
+  toast(`${p.nome} adicionado ✓`);
 }
 
 function alterarQuantidade(id, delta) {
   carrinho[id] = (carrinho[id] || 0) + delta;
   if (carrinho[id] <= 0) delete carrinho[id];
+  salvarCarrinho();
+  atualizarUI();
+}
+
+function limparCarrinho() {
+  if (totalItens() === 0) return;
+  if (!confirm("Esvaziar todo o carrinho?")) return;
+  carrinho = {};
+  salvarCarrinho();
   atualizarUI();
 }
 
 function atualizarUI() {
-  $("#fabCount").textContent = totalItens();
+  const itens = totalItens();
+  const fab = $("#btnCarrinho");
+  fab.hidden = itens === 0;
+  $("#fabCount").textContent = itens;
+  $("#fabTotal").textContent = formatarPreco(subtotal());
+
+  renderizarCatalogo(); // atualiza os steppers dos cards
   renderizarItensCarrinho();
 }
 
@@ -162,11 +240,11 @@ function renderizarItensCarrinho() {
   const container = $("#itensCarrinho");
 
   if (ids.length === 0) {
-    container.innerHTML = `<p class="carrinho-vazio">Seu carrinho está vazio 🛒</p>`;
+    container.innerHTML = `<p class="carrinho-vazio">Seu carrinho está vazio 🛒<br /><small>Adicione itens do cardápio para começar.</small></p>`;
   } else {
     container.innerHTML = ids
       .map((id) => {
-        const p = PRODUTOS.find((prod) => prod.id === Number(id));
+        const p = produtoPorId(id);
         if (!p) return "";
         const qtd = carrinho[id];
         return `
@@ -185,6 +263,14 @@ function renderizarItensCarrinho() {
       .join("");
   }
 
+  $("#btnLimpar").hidden = ids.length === 0;
+  $("#subtotalCarrinho").textContent = formatarPreco(subtotal());
+  $("#taxaCarrinho").textContent =
+    ids.length === 0
+      ? formatarPreco(0)
+      : CONFIG.taxaEntrega === 0
+        ? "Grátis 🎉"
+        : formatarPreco(CONFIG.taxaEntrega);
   $("#totalCarrinho").textContent = formatarPreco(totalValor());
 
   container.querySelectorAll("[data-delta]").forEach((btn) => {
@@ -207,19 +293,33 @@ function fecharModal() {
   document.body.style.overflow = "";
 }
 
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("#modal").hidden) fecharModal();
+});
+
 /* ============================================================
    CHECKOUT — WHATSAPP
    ============================================================ */
 function finalizarPedido(event) {
   event.preventDefault();
 
+  if (totalItens() === 0) {
+    toast("Seu carrinho está vazio 🛒");
+    return;
+  }
+  if (subtotal() < CONFIG.pedidoMinimo) {
+    toast(`Pedido mínimo: ${formatarPreco(CONFIG.pedidoMinimo)}`);
+    return;
+  }
+
   const nome = $("#campoNome").value.trim();
   const endereco = $("#campoEndereco").value.trim();
+  const obs = $("#campoObs").value.trim();
   const pagamento = $("#campoPagamento").value;
   const troco = $("#campoTroco").value.trim();
 
   const linhas = Object.entries(carrinho).map(([id, qtd]) => {
-    const p = PRODUTOS.find((prod) => prod.id === Number(id));
+    const p = produtoPorId(id);
     return `▪ ${qtd}x ${p.nome} — ${formatarPreco(p.preco * qtd)}`;
   });
 
@@ -232,9 +332,12 @@ function finalizarPedido(event) {
     `*Itens do pedido:*`,
     ...linhas,
     ``,
+    `Subtotal: ${formatarPreco(subtotal())}`,
+    CONFIG.taxaEntrega > 0 ? `Taxa de entrega: ${formatarPreco(CONFIG.taxaEntrega)}` : null,
     `💰 *Total: ${formatarPreco(totalValor())}*`,
     `💳 *Pagamento:* ${pagamento}`,
     troco ? `💵 *Troco para:* ${troco}` : null,
+    obs ? `📝 *Observações:* ${obs}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -247,10 +350,21 @@ function finalizarPedido(event) {
    EVENTOS GLOBAIS E INICIALIZAÇÃO
    ============================================================ */
 $("#btnCarrinho").addEventListener("click", abrirModal);
+$("#btnLimpar").addEventListener("click", limparCarrinho);
 document.querySelectorAll("[data-fechar]").forEach((el) =>
   el.addEventListener("click", fecharModal)
 );
 $("#formCheckout").addEventListener("submit", finalizarPedido);
+
+// Busca com debounce simples
+let buscaTimer;
+$("#campoBusca").addEventListener("input", (e) => {
+  clearTimeout(buscaTimer);
+  buscaTimer = setTimeout(() => {
+    termoBusca = e.target.value;
+    renderizarCatalogo();
+  }, 200);
+});
 
 // Mostra/oculta o campo de troco só quando o pagamento é dinheiro
 $("#campoPagamento").addEventListener("change", (e) => {
@@ -259,7 +373,6 @@ $("#campoPagamento").addEventListener("change", (e) => {
 });
 
 renderizarCategorias();
-renderizarCatalogo();
 atualizarUI();
 
 /* ============================================================

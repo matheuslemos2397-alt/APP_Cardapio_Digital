@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#e63946" />
   <meta name="description" content="Cardápio digital com pedidos direto pelo WhatsApp." />
-  <title>Cardápio Digital</title>
+  <title>Cardápio Digital — Sabor Local</title>
 
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
@@ -26,15 +26,24 @@
     <span class="header__badge">🕒 30–50 min</span>
   </header>
 
+  <!-- Busca -->
+  <div class="busca">
+    <input type="search" id="campoBusca" placeholder="🔍 Buscar no cardápio..." aria-label="Buscar no cardápio" />
+  </div>
+
   <!-- Filtro de categorias (gerado via JS) -->
   <nav id="categorias" class="categorias" aria-label="Categorias"></nav>
 
   <!-- Catálogo de produtos -->
   <main id="catalogo" class="catalogo"></main>
 
+  <p id="semResultados" class="sem-resultados" hidden>
+    Nada encontrado 😕<br /><small>Tente outro termo ou outra categoria.</small>
+  </p>
+
   <!-- Botão flutuante do carrinho -->
-  <button id="btnCarrinho" class="fab" aria-label="Abrir carrinho">
-    🛒 <span id="fabCount" class="fab__count">0</span>
+  <button id="btnCarrinho" class="fab" aria-label="Abrir carrinho" hidden>
+    🛒 <span class="fab__info"><span id="fabCount">0</span> itens • <strong id="fabTotal">R$ 0,00</strong></span>
   </button>
 
   <!-- Modal do carrinho -->
@@ -48,19 +57,26 @@
 
       <div id="itensCarrinho" class="modal__itens"></div>
 
+      <button id="btnLimpar" class="btn btn--limpar" type="button" hidden>🗑 Esvaziar carrinho</button>
+
       <div class="modal__total">
-        <span>Total</span>
-        <strong id="totalCarrinho">R$ 0,00</strong>
+        <div class="modal__linha"><span>Subtotal</span><span id="subtotalCarrinho">R$ 0,00</span></div>
+        <div class="modal__linha"><span>Taxa de entrega</span><span id="taxaCarrinho">R$ 0,00</span></div>
+        <div class="modal__linha modal__linha--destaque"><span>Total</span><strong id="totalCarrinho">R$ 0,00</strong></div>
       </div>
 
       <form id="formCheckout" class="checkout">
         <label>
           Nome*
-          <input type="text" id="campoNome" placeholder="Seu nome" required />
+          <input type="text" id="campoNome" placeholder="Seu nome" required autocomplete="name" />
         </label>
         <label>
           Endereço de entrega*
-          <input type="text" id="campoEndereco" placeholder="Rua, número, bairro" required />
+          <input type="text" id="campoEndereco" placeholder="Rua, número, bairro" required autocomplete="street-address" />
+        </label>
+        <label>
+          Observações
+          <input type="text" id="campoObs" placeholder="Ex.: sem cebola, ponto da carne..." />
         </label>
         <label>
           Pagamento
@@ -75,13 +91,14 @@
           <input type="text" id="campoTroco" placeholder="Ex.: R$ 100,00 (deixe vazio se não precisa)" />
         </label>
 
-        <button type="submit" class="btn btn--whatsapp">
-          📲 Enviar pedido no WhatsApp
-        </button>
+        <button type="submit" class="btn btn--whatsapp">📲 Enviar pedido no WhatsApp</button>
         <p class="checkout__aviso">Você será redirecionado para o WhatsApp do lojista.</p>
       </form>
     </div>
   </div>
+
+  <!-- Notificação (toast) -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

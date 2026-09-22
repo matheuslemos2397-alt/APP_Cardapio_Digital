@@ -2,20 +2,19 @@
    WHITE-LABEL: edite as variáveis abaixo para trocar a marca.
    ============================================================ */
 :root {
-  /* Cores principais */
-  --cor-fundo:        #f8f6f2;
+  --cor-fundo:        #f6f4f0;
   --cor-superficie:   #ffffff;
-  --cor-texto:        #1d1d1d;
-  --cor-texto-suave:  #6b6b6b;
-  --cor-primaria:     #e63946;   /* botões / destaques */
+  --cor-texto:        #1c1c1e;
+  --cor-texto-suave:  #70706e;
+  --cor-primaria:     #e63946;
   --cor-primaria-hover: #c92a35;
-  --cor-secundaria:   #2a9d8f;   /* whatsapp / confirmações */
-  --cor-borda:        #e5e0d8;
+  --cor-secundaria:   #1faa59;
+  --cor-borda:        #e9e4db;
 
-  /* Tipografia e formas */
   --fonte: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --raio: 14px;
-  --sombra: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --raio: 16px;
+  --sombra: 0 2px 10px rgba(28, 25, 20, 0.07);
+  --sombra-hover: 0 10px 26px rgba(28, 25, 20, 0.13);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -28,8 +27,7 @@ body {
   font-family: var(--fonte);
   background: var(--cor-fundo);
   color: var(--cor-texto);
-  /* espaço pro botão flutuante + área segura do iPhone */
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
@@ -40,21 +38,42 @@ body {
   position: sticky; top: 0; z-index: 10;
   display: flex; justify-content: space-between; align-items: center;
   gap: 12px;
-  padding: calc(12px + env(safe-area-inset-top, 0px)) clamp(14px, 4vw, 32px) 12px;
-  background: var(--cor-superficie);
-  border-bottom: 1px solid var(--cor-borda);
+  padding: calc(14px + env(safe-area-inset-top, 0px)) clamp(14px, 4vw, 32px) 14px;
+  background: linear-gradient(135deg, var(--cor-primaria), #b91c26);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(230, 57, 70, 0.35);
 }
-.header__title { font-size: 1.35rem; }
-.header__subtitle { font-size: 0.8rem; color: var(--cor-texto-suave); }
+.header__title { font-size: clamp(1.3rem, 4vw, 1.6rem); letter-spacing: -0.02em; }
+.header__subtitle { font-size: 0.8rem; opacity: 0.9; }
 .header__badge {
-  background: var(--cor-fundo); border: 1px solid var(--cor-borda);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(4px);
+  color: #fff;
   border-radius: 999px; padding: 6px 12px; font-size: 0.8rem;
+  white-space: nowrap;
 }
+
+/* ---------- Busca ---------- */
+.busca {
+  position: sticky; top: 0; z-index: 9;
+  padding: 12px 16px 4px;
+  background: var(--cor-fundo);
+}
+.busca input {
+  width: 100%; max-width: 720px; margin: 0 auto; display: block;
+  border: 1px solid var(--cor-borda); border-radius: 999px;
+  padding: 12px 18px; font-size: 0.95rem; font-family: inherit;
+  background: var(--cor-superficie); box-shadow: var(--sombra);
+}
+.busca input:focus { outline: 2px solid var(--cor-primaria); border-color: transparent; }
 
 /* ---------- Categorias ---------- */
 .categorias {
+  position: sticky; top: 60px; z-index: 8;
   display: flex; gap: 8px; overflow-x: auto;
-  padding: 12px 16px; background: var(--cor-superficie);
+  padding: 10px 16px;
+  background: var(--cor-fundo);
   scrollbar-width: none;
 }
 .categorias::-webkit-scrollbar { display: none; }
@@ -63,21 +82,21 @@ body {
   border: 1px solid var(--cor-borda); background: var(--cor-superficie);
   color: var(--cor-texto); border-radius: 999px;
   padding: 8px 16px; font-size: 0.85rem; cursor: pointer;
-  transition: 0.15s;
+  transition: 0.18s;
 }
+.categorias button:active { transform: scale(0.95); }
 .categorias button.ativo {
   background: var(--cor-primaria); border-color: var(--cor-primaria);
   color: #fff; font-weight: 600;
+  box-shadow: 0 4px 12px rgba(230, 57, 70, 0.35);
 }
 
 /* ---------- Catálogo ---------- */
-/* Grid fluido: 1 coluna em celular, 2 em telas médias, 3+ em desktops.
-   minmax garante que nunca "estoura" nem fica espremido. */
 .catalogo {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: clamp(12px, 2.5vw, 20px);
-  padding: clamp(12px, 3vw, 28px);
+  padding: clamp(10px, 3vw, 28px);
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
@@ -89,21 +108,38 @@ body {
   border-radius: var(--raio);
   padding: 12px;
   box-shadow: var(--sombra);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  animation: aparecerCard 0.3s ease backwards;
 }
+.card:hover { transform: translateY(-3px); box-shadow: var(--sombra-hover); }
+@keyframes aparecerCard { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .card__img {
   width: clamp(76px, 22vw, 110px);
   height: clamp(76px, 22vw, 110px);
   flex: 0 0 auto;
-  object-fit: cover; border-radius: 10px; background: var(--cor-fundo);
+  object-fit: cover; border-radius: 12px; background: var(--cor-fundo);
 }
-.card__nome { font-size: clamp(0.95rem, 2.5vw, 1.1rem); }
+.card__nome { font-size: clamp(0.95rem, 2.5vw, 1.1rem); margin-bottom: 4px; }
 .card__info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.card__nome { margin-bottom: 4px; }
 .card__desc { font-size: 0.8rem; color: var(--cor-texto-suave); flex: 1; }
 .card__rodape {
-  display: flex; justify-content: space-between; align-items: center; margin-top: 8px;
+  display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px;
 }
-.card__preco { font-weight: 700; color: var(--cor-primaria); }
+.card__preco { font-weight: 700; color: var(--cor-primaria); white-space: nowrap; }
+
+/* ---------- Stepper (quantidade no card) ---------- */
+.stepper {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--cor-fundo); border: 1px solid var(--cor-borda);
+  border-radius: 999px; padding: 4px 8px;
+}
+.stepper button {
+  width: 28px; height: 28px; border-radius: 999px; border: none;
+  background: var(--cor-primaria); color: #fff; cursor: pointer; font-size: 1rem;
+  transition: 0.15s;
+}
+.stepper button:active { transform: scale(0.9); }
+.stepper span { font-weight: 700; min-width: 18px; text-align: center; }
 
 /* ---------- Botões ---------- */
 .btn {
@@ -111,58 +147,79 @@ body {
   padding: 10px 18px; font-size: 0.85rem; font-weight: 600;
   transition: 0.15s;
 }
-.btn--add { background: var(--cor-primaria); color: #fff; }
+.btn:active { transform: scale(0.96); }
+.btn--add { background: var(--cor-primaria); color: #fff; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); }
 .btn--add:hover { background: var(--cor-primaria-hover); }
 .btn--whatsapp {
   width: 100%; background: var(--cor-secundaria); color: #fff;
   padding: 14px; font-size: 1rem; margin-top: 12px;
+  box-shadow: 0 4px 14px rgba(31, 170, 89, 0.35);
 }
+.btn--whatsapp:hover { filter: brightness(1.07); }
+.btn--limpar {
+  margin-top: 12px; background: transparent; color: var(--cor-texto-suave);
+  border: 1px dashed var(--cor-borda); font-weight: 500;
+}
+.btn--limpar:hover { color: var(--cor-primaria); border-color: var(--cor-primaria); }
 
 /* ---------- Botão flutuante ---------- */
 .fab {
   position: fixed;
-  right: calc(18px + env(safe-area-inset-right, 0px));
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   background: var(--cor-primaria); color: #fff;
   border: none; border-radius: 999px;
-  padding: 14px 22px; font-size: 1.1rem; cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  padding: 14px 20px; font-size: 1.1rem; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(230, 57, 70, 0.45);
+  transition: transform 0.18s ease;
+  animation: aparecerFab 0.3s ease;
 }
-.fab__count {
-  background: #fff; color: var(--cor-primaria);
-  border-radius: 999px; font-size: 0.75rem; font-weight: 700;
-  padding: 2px 8px; margin-left: 4px;
-}
+.fab:hover { transform: translateY(-2px); }
+.fab:active { transform: scale(0.95); }
+@keyframes aparecerFab { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.fab__info { font-size: 0.9rem; margin-left: 6px; }
+.fab__info strong { font-weight: 700; }
 
 /* ---------- Modal ---------- */
 .modal { position: fixed; inset: 0; z-index: 30; }
 .modal__overlay {
-  position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5);
+  position: absolute; inset: 0; background: rgba(20, 16, 12, 0.55);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal__conteudo {
   position: absolute; left: 0; right: 0; bottom: 0;
   max-height: 88vh; max-height: 88dvh;
   overflow-y: auto;
   background: var(--cor-superficie);
-  border-radius: 20px 20px 0 0;
+  border-radius: 22px 22px 0 0;
   padding: 20px clamp(16px, 4vw, 28px)
            calc(20px + env(safe-area-inset-bottom, 0px));
   width: 100%; max-width: 640px; margin: 0 auto;
-  animation: subir 0.25s ease;
+  animation: subir 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@keyframes subir { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal__conteudo::before {
+  content: ""; display: block; width: 44px; height: 4px;
+  background: var(--cor-borda); border-radius: 999px;
+  margin: 0 auto 14px;
+}
+@keyframes subir { from { transform: translateY(48px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .modal__fechar {
   border: none; background: var(--cor-fundo); border-radius: 999px;
   width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
+  transition: 0.15s;
 }
+.modal__fechar:hover { background: var(--cor-borda); }
 
 .modal__itens { display: flex; flex-direction: column; gap: 10px; }
 .item-carrinho {
   display: flex; align-items: center; gap: 10px;
   border: 1px solid var(--cor-borda); border-radius: var(--raio); padding: 10px 12px;
+  animation: aparecerCard 0.2s ease;
 }
 .item-carrinho__info { flex: 1; }
 .item-carrinho__nome { font-size: 0.9rem; font-weight: 600; }
@@ -171,39 +228,63 @@ body {
 .item-carrinho__qtd button {
   width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--cor-borda);
   background: var(--cor-superficie); cursor: pointer; font-size: 1rem;
+  transition: 0.15s;
 }
+.item-carrinho__qtd button:active { transform: scale(0.9); }
 .carrinho-vazio { text-align: center; color: var(--cor-texto-suave); padding: 24px 0; }
+.carrinho-vazio small { font-size: 0.78rem; }
 
 .modal__total {
-  display: flex; justify-content: space-between;
+  display: flex; flex-direction: column; gap: 6px;
   border-top: 1px solid var(--cor-borda); margin-top: 14px; padding-top: 14px;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
+.modal__linha { display: flex; justify-content: space-between; color: var(--cor-texto-suave); }
+.modal__linha--destaque { font-size: 1.15rem; color: var(--cor-texto); font-weight: 700; padding-top: 4px; }
+.modal__linha--destaque strong { color: var(--cor-primaria); }
 
 /* ---------- Checkout ---------- */
 .checkout { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .checkout label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
 .checkout input, .checkout select {
-  border: 1px solid var(--cor-borda); border-radius: 10px;
+  border: 1px solid var(--cor-borda); border-radius: 12px;
   padding: 12px; font-size: 0.95rem; font-family: inherit;
   background: var(--cor-fundo);
 }
-.checkout input:focus, .checkout select:focus { outline: 2px solid var(--cor-primaria); }
+.checkout input:focus, .checkout select:focus { outline: 2px solid var(--cor-primaria); background: #fff; }
 .checkout__aviso { text-align: center; font-size: 0.75rem; color: var(--cor-texto-suave); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 16px);
+  z-index: 40;
+  background: #1c1c1e; color: #fff;
+  border-radius: 999px; padding: 10px 20px; font-size: 0.85rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-width: calc(100vw - 32px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.toast--visivel { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Resultado vazio ---------- */
+.sem-resultados {
+  text-align: center; color: var(--cor-texto-suave);
+  padding: 40px 20px; font-size: 1rem;
+}
+.sem-resultados small { font-size: 0.82rem; }
 
 /* ============================================================
    BREAKPOINTS
    ============================================================ */
-
-/* Telas muito pequenas (≤ 360px): compacta sem quebrar */
 @media (max-width: 360px) {
-  .header__badge { display: none; } /* prioriza o título */
+  .header__badge { display: none; }
   .card { padding: 10px; gap: 10px; }
-  .fab { padding: 12px 18px; font-size: 1rem; }
+  .fab { padding: 12px 16px; font-size: 1rem; }
 }
 
-/* Paisagem em celular (altura baixa): o modal vira painel central
-   para não cobrir 88% da tela */
 @media (max-height: 480px) and (orientation: landscape) {
   .modal__conteudo {
     top: 16px; bottom: 16px; right: 16px; left: auto;
@@ -212,24 +293,28 @@ body {
     max-width: 480px;
     animation: none;
   }
+  .modal__conteudo::before { display: none; }
 }
 
-/* Tablets e desktops grandes: modal também pode ser central */
 @media (min-width: 768px) {
-  .modal__overlay { background: rgba(0, 0, 0, 0.55); }
   .modal__conteudo {
     top: 50%; bottom: auto; left: 50%; right: auto;
     transform: translate(-50%, -50%);
     border-radius: var(--raio);
     max-height: 85vh; max-height: 85dvh;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: aparecer 0.2s ease;
+    animation: aparecer 0.22s ease;
   }
+  .modal__conteudo::before { display: none; }
 }
 @keyframes aparecer { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
-/* Telas muito grandes (TV, monitores 4K): limita a leitura a uma coluna confortável */
 @media (min-width: 1600px) {
   body { font-size: 1.15rem; }
   .catalogo { max-width: 1440px; }
+}
+
+/* Acessibilidade: reduz animações se o usuário preferir */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
