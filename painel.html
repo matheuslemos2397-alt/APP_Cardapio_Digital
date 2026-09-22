@@ -166,6 +166,27 @@
 
     /* ---------- Ações ---------- */
     async function mudarStatus(id, status) {
+      // Ao despachar: pergunta quem é o entregador e grava a entrega
+      if (status === "a_caminho") {
+        const pedido = pedidos.find((p) => p.id === id);
+        const nome = prompt("Nome do entregador:", "");
+        if (nome === null) return; // cancelou
+        const moto = prompt("Motinha (classica, esportiva ou street):", "classica") || "classica";
+
+        const { error: e1 } = await sb.from("pedidos").update({ status }).eq("id", id);
+        if (e1) { alert("Erro: " + e1.message); return; }
+
+        const { error: e2 } = await sb.from("entregas").insert({
+          pedido_id: id,
+          entregador_nome: nome.trim() || "Entregador",
+          moto: moto.trim().toLowerCase(),
+        });
+        if (e2) { alert("Pedido despachado, mas falhou ao gravar entrega: " + e2.message); return; }
+
+        alert(`🛵 ${nome} está com o pedido #${pedido.codigo}!\nO entregador abre o app e digita ${pedido.codigo}.`);
+        return;
+      }
+
       const { error } = await sb.from("pedidos").update({ status }).eq("id", id);
       if (error) alert("Erro: " + error.message);
     }
