@@ -49,6 +49,17 @@
       border: 1px solid #ffe28a; border-radius: 12px; padding: 10px 12px;
     }
     .voltar { color: #1faa59; font-size: 0.85rem; text-decoration: none; }
+    .motos { display: flex; gap: 8px; }
+    .motos button {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: #f6f4f0; border: 2px solid #e9e4db; border-radius: 14px;
+      padding: 10px 4px; font-size: 1.6rem; cursor: pointer; transition: .15s;
+    }
+    .motos button small { font-size: 0.7rem; color: #70706e; }
+    .motos button.selecionada {
+      border-color: #1faa59; background: #e7f7ee;
+      box-shadow: 0 4px 12px rgba(31, 170, 89, 0.25);
+    }
   </style>
 </head>
 <body>
@@ -58,6 +69,15 @@
     <label>
       Código da entrega
       <input type="text" id="codigo" placeholder="Ex.: TESTE123" maxlength="20" />
+    </label>
+
+    <label>
+      Escolha sua motinha
+      <div class="motos" id="motos">
+        <button type="button" data-moto="classica" class="selecionada">🏍️<small>Clássica</small></button>
+        <button type="button" data-moto="esportiva">🏁<small>Esportiva</small></button>
+        <button type="button" data-moto="street">🛵<small>Street</small></button>
+      </div>
     </label>
 
     <button id="btnIniciar" class="btn-iniciar">▶ Iniciar rastreio</button>
@@ -89,6 +109,7 @@
     const statusEl = $("#status");
     const coordsEl = $("#coords");
     let rodando = false;
+    let motoEscolhida = "classica";
     let watchId = null;
     let demoTimer = null;
     let canal = null; // canal Supabase (broadcast)
@@ -100,7 +121,7 @@
     }
 
     function enviarPosicao(lat, lng) {
-      const payload = { lat, lng, ts: Date.now() };
+      const payload = { lat, lng, ts: Date.now(), moto: motoEscolhida };
 
       if (usarSupabase && canal) {
         canal.send({ type: "broadcast", event: "posicao", payload });
@@ -170,6 +191,15 @@
       $("#btnIniciar").textContent = "▶ Retomar rastreio";
       $("#btnParar").style.display = "none";
     }
+
+    // Escolha da motinha
+    document.querySelectorAll("#motos button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#motos button").forEach((b) => b.classList.remove("selecionada"));
+        btn.classList.add("selecionada");
+        motoEscolhida = btn.dataset.moto;
+      });
+    });
 
     $("#btnIniciar").addEventListener("click", iniciar);
     $("#btnParar").addEventListener("click", parar);

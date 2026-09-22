@@ -88,40 +88,66 @@
     let mapa = null, marcador = null, canal = null, demoTimer = null;
     let ultimaPos = null; // pra calcular a direção e girar a moto
 
-    /* Motinha em SVG — vira na direção do movimento */
-    const SVG_MOTO = `
-      <svg viewBox="0 0 64 64" width="48" height="48">
-        <g transform="rotate(-90 32 32)">
-          <!-- rodas -->
-          <circle cx="16" cy="48" r="10" fill="#1c1c1e"/>
-          <circle cx="50" cy="48" r="10" fill="#1c1c1e"/>
-          <circle cx="16" cy="48" r="4.5" fill="#9a9a9a"/>
-          <circle cx="50" cy="48" r="4.5" fill="#9a9a9a"/>
-          <!-- garfo dianteiro + guidão -->
+    /* Motinhas em SVG — cada modelo vira na direção do movimento.
+       Novos modelos: adicione uma entrada em MOTOS. */
+    const MOTOS = {
+      classica: {
+        cor: "#1faa59",
+        svg: `
+          <circle cx="16" cy="48" r="10" fill="#1c1c1e"/><circle cx="50" cy="48" r="10" fill="#1c1c1e"/>
+          <circle cx="16" cy="48" r="4.5" fill="#9a9a9a"/><circle cx="50" cy="48" r="4.5" fill="#9a9a9a"/>
           <line x1="53" y1="44" x2="47" y2="26" stroke="#1c1c1e" stroke-width="4" stroke-linecap="round"/>
           <path d="M43 24 L47 22 L52 26" stroke="#1c1c1e" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <!-- farol -->
           <circle cx="50" cy="29" r="4" fill="#ffd60a" stroke="#1c1c1e" stroke-width="2"/>
-          <!-- tanque + banco -->
           <path d="M22 32 Q32 24 42 30 L40 36 Q30 33 24 37 Z" fill="#1faa59"/>
           <rect x="10" y="32" width="14" height="6" rx="3" fill="#1c1c1e"/>
-          <!-- motor -->
-          <circle cx="30" cy="42" r="7" fill="#3a3a3c"/>
-          <circle cx="30" cy="42" r="3" fill="#9a9a9a"/>
-          <!-- escapamento -->
+          <circle cx="30" cy="42" r="7" fill="#3a3a3c"/><circle cx="30" cy="42" r="3" fill="#9a9a9a"/>
           <path d="M30 46 L18 50" stroke="#9a9a9a" stroke-width="4" stroke-linecap="round"/>
-          <!-- quadro -->
-          <path d="M16 46 L30 42 L50 46" stroke="#1faa59" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-        </g>
-      </svg>`;
+          <path d="M16 46 L30 42 L50 46" stroke="#1faa59" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+      },
+      esportiva: {
+        cor: "#e63946",
+        svg: `
+          <circle cx="16" cy="48" r="10" fill="#1c1c1e"/><circle cx="50" cy="48" r="10" fill="#1c1c1e"/>
+          <circle cx="16" cy="48" r="4.5" fill="#d0d0d0"/><circle cx="50" cy="48" r="4.5" fill="#d0d0d0"/>
+          <line x1="53" y1="43" x2="48" y2="24" stroke="#e63946" stroke-width="5" stroke-linecap="round"/>
+          <path d="M44 22 L50 20 L54 25" stroke="#1c1c1e" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M46 28 L54 30 L52 36 L45 34 Z" fill="#1c1c1e"/>
+          <path d="M14 36 Q30 24 44 32 L42 40 Q28 36 18 41 Z" fill="#e63946"/>
+          <rect x="8" y="34" width="12" height="6" rx="3" fill="#1c1c1e"/>
+          <path d="M24 43 L34 43 L31 50 L24 50 Z" fill="#3a3a3c"/>
+          <path d="M34 47 L46 51" stroke="#c0c0c0" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M16 46 L30 42 L50 46" stroke="#e63946" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+      },
+      street: {
+        cor: "#2563eb",
+        svg: `
+          <circle cx="16" cy="47" r="10" fill="#1c1c1e"/><circle cx="50" cy="47" r="10" fill="#1c1c1e"/>
+          <circle cx="16" cy="47" r="4.5" fill="#9a9a9a"/><circle cx="50" cy="47" r="4.5" fill="#9a9a9a"/>
+          <line x1="52" y1="42" x2="48" y2="24" stroke="#1c1c1e" stroke-width="4" stroke-linecap="round"/>
+          <path d="M42 22 L48 21 L53 25" stroke="#1c1c1e" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <circle cx="49" cy="28" r="3.5" fill="#ffd60a" stroke="#1c1c1e" stroke-width="2"/>
+          <path d="M26 34 Q34 26 44 32 L42 38 Q34 35 28 39 Z" fill="#2563eb"/>
+          <rect x="14" y="30" width="14" height="7" rx="3.5" fill="#1c1c1e"/>
+          <circle cx="31" cy="41" r="6.5" fill="#3a3a3c"/><circle cx="31" cy="41" r="3" fill="#9a9a9a"/>
+          <path d="M31 45 L19 49" stroke="#9a9a9a" stroke-width="4" stroke-linecap="round"/>
+          <path d="M16 45 L31 41 L50 45" stroke="#2563eb" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+      },
+    };
 
-    const iconeMoto = (rotacao) =>
-      L.divIcon({
+    const iconeMoto = (rotacao, variante) => {
+      const modelo = MOTOS[variante] || MOTOS.classica;
+      return L.divIcon({
         className: "marcador-moto",
-        html: `<div style="transform: rotate(${rotacao}deg); transition: transform .6s ease;">${SVG_MOTO}</div>`,
+        html: `<div style="transform: rotate(${rotacao}deg); transition: transform .6s ease;">
+                 <svg viewBox="0 0 64 64" width="48" height="48">
+                   <g transform="rotate(-90 32 32)">${modelo.svg}</g>
+                 </svg>
+               </div>`,
         iconSize: [48, 48],
         iconAnchor: [24, 24],
       });
+    };
 
     /* Direção (bearing) entre dois pontos, em graus */
     function direcaoEntre(a, b) {
@@ -139,17 +165,18 @@
       statusEl.classList.toggle("ativo", ativo);
     }
 
-    function receberPosicao({ lat, lng }) {
+    function receberPosicao({ lat, lng, moto }) {
       const novaPos = [lat, lng];
       const rotacao = ultimaPos && novaPos[0] !== ultimaPos[0]
         ? direcaoEntre(ultimaPos, novaPos)
         : 0;
+      const modelo = moto || "classica";
 
       if (!marcador) {
-        marcador = L.marker(novaPos, { icon: iconeMoto(0), title: "Entregador" }).addTo(mapa);
+        marcador = L.marker(novaPos, { icon: iconeMoto(0, modelo), title: "Entregador" }).addTo(mapa);
         mapa.setView(novaPos, 16);
       } else {
-        marcador.setIcon(iconeMoto(rotacao));
+        marcador.setIcon(iconeMoto(rotacao, modelo));
         marcador.setLatLng(novaPos);
         mapa.panTo(novaPos, { animate: true });
       }
