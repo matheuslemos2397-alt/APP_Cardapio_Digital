@@ -385,6 +385,7 @@ async function finalizarPedido(event) {
 
   // 4) Mostra o link de rastreio pro cliente
   toast(`Pedido ${codigo} enviado! Acompanhe em: Rastreio no topo ⬆️`);
+  localStorage.setItem("meu-codigo-rastreio", codigo); // rastreio abre sozinho depois
   $("#linkRastreio").href = linkRastreio;
   $("#linkRastreio").hidden = false;
 
