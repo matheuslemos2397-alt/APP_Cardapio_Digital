@@ -57,6 +57,10 @@
     }
     .status.ativo { background: #e7f7ee; color: #157a3f; font-weight: 600; }
     .coords { font-family: ui-monospace, monospace; font-size: 0.78rem; color: #70706e; text-align: center; }
+    .aviso-rastreio {
+      font-size: 0.78rem; color: #8a4b00; background: #fff4e0;
+      border: 1px solid #ffd699; border-radius: 12px; padding: 10px 12px;
+    }
     .vazio { text-align: center; color: #9a958c; padding: 20px 0; font-size: 0.9rem; }
     .voltar { color: #1faa59; font-size: 0.85rem; text-decoration: none; text-align: center; }
     .moto-info { font-size: 0.8rem; color: #70706e; text-align: center; }
@@ -86,6 +90,10 @@
     <button id="btnRastreio" class="btn-on" disabled>▶ Iniciar rastreio (GPS)</button>
     <div id="status" class="status">Rastreio parado</div>
     <div id="coords" class="coords">—</div>
+    <div id="avisoRastreio" class="aviso-rastreio" hidden>
+      ⚠️ <strong>Mantenha este app aberto na tela</strong> enquanto entrega.
+      Se minimizar ou trocar de app, o GPS pausa (e volta sozinho ao retornar).
+    </div>
   </div>
 
   <a class="voltar" href="index.html">← Voltar</a>
@@ -106,6 +114,7 @@
     let entregaAtiva = null; // entrega com rastreio ligado
     let watchId = null;
     let canal = null;
+    let wakeLock = null;     // mantém a tela ligada durante o rastreio
 
     /* ---------- Quem sou eu ---------- */
     async function carregarMotoboys() {
@@ -211,6 +220,21 @@
       }
     }
 
+    /* ---------- Wake Lock: a tela NÃO apaga durante o rastreio ---------- */
+    async function ligarTela() {
+      try {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => {
+          // Se o sistema liberou (ex: troca de aba), tenta religar ao voltar
+          wakeLock = null;
+        });
+      } catch { /* aparelho sem suporte — segue sem */ }
+    }
+
+    function desligarTela() {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    }
+
     function iniciarRastreio() {
       const codigo = entregaAtiva?.pedidos?.codigo;
       if (!codigo) { alert("Nenhuma entrega ativa."); return; }
@@ -219,19 +243,30 @@
       watchId = navigator.geolocation.watchPosition(
         (pos) => enviarPosicao(pos.coords.latitude, pos.coords.longitude),
         (erro) => setStatus("Erro no GPS: " + erro.message),
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
       );
-      setStatus(`Rastreio ATIVO — pedido #${codigo}`, true);
+      ligarTela();
+      $("#avisoRastreio").hidden = false;
+      setStatus(`Rastreio ATIVO — pedido #${codigo} 🔒 (tela permanece ligada)`, true);
       $("#btnRastreio").textContent = "■ Parar rastreio";
     }
 
     function pararRastreio() {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
       if (canal) { canal.unsubscribe(); canal = null; }
+      desligarTela();
+      $("#avisoRastreio").hidden = true;
       setStatus("Rastreio parado");
       $("#coords").textContent = "—";
       $("#btnRastreio").textContent = "▶ Iniciar rastreio (GPS)";
     }
+
+    // Voltou pra aba/app? Religa tela e GPS se o rastreio deveria estar ativo
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState !== "visible") return;
+      if (entregaAtiva && watchId === null) iniciarRastreio();
+      else if (entregaAtiva && !wakeLock) ligarTela();
+    });
 
     function setStatus(txt, ativo = false) {
       const el = $("#status");
