@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1faa59" />
+  <title>Ponto B — Acompanhar Entrega</title>
+
+  <!-- Mapa gratuito: Leaflet + OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SDK do Supabase (tempo real). Só usado quando SUPABASE_URL estiver preenchida. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f6f4f0; color: #1c1c1e;
+      min-height: 100dvh;
+      display: flex; flex-direction: column;
+    }
+    .topo {
+      padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 12px;
+      background: #fff; border-bottom: 1px solid #e9e4db;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .topo h1 { font-size: 1.2rem; }
+    .linha { display: flex; gap: 8px; }
+    .linha input {
+      flex: 1; border: 1px solid #e9e4db; border-radius: 12px;
+      padding: 11px 14px; font-size: 0.95rem; font-family: inherit;
+      background: #f6f4f0; text-transform: uppercase;
+    }
+    .linha input:focus { outline: 2px solid #1faa59; background: #fff; }
+    .linha button {
+      border: none; border-radius: 12px; padding: 0 18px;
+      background: #1faa59; color: #fff; font-weight: 700;
+      font-size: 0.9rem; cursor: pointer; font-family: inherit;
+    }
+    .linha button:active { transform: scale(.96); }
+    .status {
+      font-size: 0.8rem; color: #70706e;
+    }
+    .status.ativo { color: #157a3f; font-weight: 600; }
+    #mapa { flex: 1; min-height: 55dvh; background: #e9e4db; }
+    .aviso-demo {
+      margin: 10px 16px; font-size: 0.75rem; color: #8a6d00;
+      background: #fff8e0; border: 1px solid #ffe28a;
+      border-radius: 12px; padding: 8px 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topo">
+    <h1>🗺️ Acompanhar entrega</h1>
+    <div class="linha">
+      <input type="text" id="codigo" placeholder="Código da entrega (ex.: TESTE123)" maxlength="20" />
+      <button id="btnAcompanhar">Acompanhar</button>
+    </div>
+    <div id="status" class="status">Digite o código e toque em Acompanhar</div>
+  </div>
+
+  <div id="avisoDemo" class="aviso-demo" hidden>
+    ⚠️ <strong>Modo simulação:</strong> abra o <em>sender.html</em> com o mesmo código
+    em outra aba deste mesmo navegador para ver o ponto se mover.
+  </div>
+
+  <div id="mapa"></div>
+
+  <script>
+    /* ============================================================
+       CONFIG — mesmo preenchimento do sender.html
+       ============================================================ */
+    const SUPABASE_URL = "";
+    const SUPABASE_ANON_KEY = "";
+    const usarSupabase = SUPABASE_URL && SUPABASE_ANON_KEY;
+
+    const $ = (s) => document.querySelector(s);
+    const statusEl = $("#status");
+
+    let mapa = null, marcador = null, canal = null, demoTimer = null;
+
+    function setStatus(txt, ativo = false) {
+      statusEl.textContent = txt;
+      statusEl.classList.toggle("ativo", ativo);
+    }
+
+    function receberPosicao({ lat, lng }) {
+      const novaPos = [lat, lng];
+      if (!marcador) {
+        marcador = L.marker(novaPos, { title: "Entregador" }).addTo(mapa);
+        mapa.setView(novaPos, 16);
+      } else {
+        marcador.setLatLng(novaPos);
+        mapa.panTo(novaPos, { animate: true });
+      }
+      setStatus("Atualizado às " + new Date().toLocaleTimeString("pt-BR"), true);
+    }
+
+    function parar() {
+      if (canal) { canal.unsubscribe(); canal = null; }
+      clearInterval(demoTimer);
+    }
+
+    function acompanhar() {
+      const codigo = $("#codigo").value.trim().toUpperCase();
+      if (!codigo) { setStatus("Digite um código primeiro"); return; }
+
+      parar();
+
+      if (!mapa) {
+        mapa = L.map("mapa").setView([-3.1190, -60.0217], 13); // Manaus como padrão
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "© OpenStreetMap",
+        }).addTo(mapa);
+      }
+
+      if (usarSupabase) {
+        // TEMPO REAL via Supabase Broadcast
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        canal = sb.channel("rastreio-" + codigo);
+        canal.on("broadcast", { event: "posicao" }, ({ payload }) => receberPosicao(payload));
+        canal.subscribe((s) =>
+          setStatus(s === "SUBSCRIBED" ? "Conectado — aguardando o entregador..." : "Conectando...", s === "SUBSCRIBED")
+        );
+      } else {
+        // MODO SIMULAÇÃO: escuta o localStorage que o sender.html grava
+        $("#avisoDemo").hidden = false;
+        const chave = "rastreio-demo-" + codigo;
+        const ler = () => {
+          const dados = JSON.parse(localStorage.getItem(chave) || "null");
+          if (dados) receberPosicao(dados);
+          else setStatus("Aguardando o entregador enviar posição...");
+        };
+        window.addEventListener("storage", (e) => { if (e.key === chave) ler(); });
+        demoTimer = setInterval(ler, 2000);
+        ler();
+      }
+    }
+
+    $("#btnAcompanhar").addEventListener("click", acompanhar);
+  </script>
+</body>
+</html>
