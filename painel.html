@@ -42,17 +42,15 @@
       animation: aparecer 0.3s ease;
     }
     @keyframes aparecer { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    .pedido__cab {
-      display: flex; justify-content: space-between; align-items: center; gap: 10px;
-      margin-bottom: 8px;
-    }
+    .pedido__cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
     .pedido__codigo { font-size: 1.25rem; font-weight: 800; letter-spacing: 0.05em; }
     .badge {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
       padding: 5px 12px; border-radius: 999px; white-space: nowrap;
     }
     .badge--recebido { background: #3a3325; color: #ffc94d; }
     .badge--preparo { background: #25324a; color: #7db2ff; }
+    .badge--pronto { background: #3a2b12; color: #ff9d3d; }
     .badge--a_caminho { background: #24382a; color: #5fd68b; }
     .badge--entregue { background: #2b2b2b; color: #9a958c; }
     .pedido__info { font-size: 0.88rem; color: #c8c3ba; line-height: 1.5; }
@@ -63,26 +61,37 @@
       font-size: 0.85rem; color: #c8c3ba;
     }
     .pedido__total { font-size: 1.05rem; font-weight: 800; color: #5fd68b; }
+
     .pedido__acoes { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-    .pedido__acoes button {
+    .pedido__acoes button, .pedido__acoes a.btn {
       flex: 1; min-width: 130px;
       border: none; border-radius: 12px; padding: 12px;
       font-size: 0.88rem; font-weight: 700; cursor: pointer;
       font-family: inherit; transition: .15s;
+      text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
     }
     .pedido__acoes button:active { transform: scale(.97); }
     .btn-preparo { background: #25324a; color: #7db2ff; }
-    .btn-caminho { background: #24382a; color: #5fd68b; }
-    .btn-entregue { background: #2b2b2b; color: #9a958c; }
-    .btn-whatsapp {
-      flex: 0 0 auto !important; min-width: auto !important;
-      background: #1faa59; color: #fff; padding: 12px 16px !important;
-      text-decoration: none; display: inline-flex; align-items: center;
+    .btn-pronto { background: #3a2b12; color: #ff9d3d; }
+    .btn-whatsapp { flex: 0 0 auto !important; min-width: auto !important; background: #1faa59; color: #fff; padding: 12px 16px !important; }
+
+    /* escolha do motoboy */
+    .motoboys { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .motoboys button {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #12100e; border: 1px solid #2e2a24; color: #f2efe9;
+      border-radius: 12px; padding: 12px 14px;
+      font-size: 0.9rem; cursor: pointer; font-family: inherit;
     }
-    .vazio {
-      text-align: center; color: #6e6a62; padding: 60px 20px;
-      font-size: 0.95rem;
+    .motoboys button:hover { border-color: #5fd68b; }
+    .motoboys .moto-tag { font-size: 0.75rem; color: #9a958c; }
+    .entrega-info {
+      margin-top: 10px; padding: 10px 12px; border-radius: 12px;
+      background: #12100e; font-size: 0.85rem; color: #c8c3ba;
     }
+    .entrega-info strong { color: #f2efe9; }
+
+    .vazio { text-align: center; color: #6e6a62; padding: 60px 20px; font-size: 0.95rem; }
     .hora { font-size: 0.75rem; color: #6e6a62; margin-top: 10px; }
   </style>
 </head>
@@ -102,20 +111,43 @@
     const STATUS = {
       recebido: "Recebido",
       preparo: "Em preparo",
+      pronto: "Pronto p/ retirada",
       a_caminho: "A caminho",
       entregue: "Entregue",
     };
+    const STATUS_ENTREGA = {
+      aguardando: "⏳ Aguardando o motoboy pegar no balcão",
+      a_caminho: "🛵 Motoboy a caminho do cliente",
+      entregue: "✅ Entrega confirmada pelo motoboy",
+    };
+
     let pedidos = [];
+    let entregas = {};   // pedido_id -> entrega
+    let motoboys = [];
 
     const $ = (s) => document.querySelector(s);
+    const formatar = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-    function formatar(valor) {
-      return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    /* ---------- Dados ---------- */
+    async function carregarTudo() {
+      const [{ data: p }, { data: e }] = await Promise.all([
+        sb.from("pedidos").select("*")
+          .gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+          .order("created_at", { ascending: false }),
+        sb.from("entregas").select("*").gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
+      ]);
+      pedidos = p || [];
+      entregas = Object.fromEntries((e || []).map((x) => [x.pedido_id, x]));
+      renderizar();
+    }
+
+    async function carregarMotoboys() {
+      const { data } = await sb.from("motoboys").select("*").eq("disponivel", true).order("nome");
+      motoboys = data || [];
     }
 
     /* ---------- Render ---------- */
     function renderizar() {
-      // mais recentes primeiro; entregues vão pro final
       const ordenados = [...pedidos].sort((a, b) => {
         if (a.status === "entregue" && b.status !== "entregue") return 1;
         if (a.status !== "entregue" && b.status === "entregue") return -1;
@@ -128,13 +160,31 @@
       }
 
       $("#pedidos").innerHTML = ordenados.map((p) => {
-        const itens = (p.itens || [])
-          .map((i) => `${i.qtd}x ${i.nome}`)
-          .join(" • ");
-        const proximo =
-          p.status === "recebido" ? `<button class="btn-preparo" data-acao="preparo" data-id="${p.id}">🍳 Começar preparo</button>` :
-          p.status === "preparo" ? `<button class="btn-caminho" data-acao="a_caminho" data-id="${p.id}">🛵 Despachar entrega</button>` :
-          p.status === "a_caminho" ? `<button class="btn-entregue" data-acao="entregue" data-id="${p.id}">✅ Marcar entregue</button>` : "";
+        const entrega = entregas[p.id];
+        let acoes = "";
+
+        if (p.status === "recebido") {
+          acoes = `<button class="btn-preparo" data-acao="preparo" data-id="${p.id}">🍳 Começar preparo</button>`;
+        } else if (p.status === "preparo") {
+          acoes = `<button class="btn-pronto" data-acao="pronto" data-id="${p.id}">🛎️ Pronto — despachar</button>`;
+        } else if (p.status === "pronto" && !entrega) {
+          // escolher motoboy (1 clique)
+          acoes = `
+            <div class="motoboys">
+              ${motoboys.map((m) => `
+                <button data-despachar="${p.id}" data-motoboy="${m.id}">
+                  <span>🛵 ${m.nome}</span><span class="moto-tag">${m.moto}</span>
+                </button>`).join("")}
+            </div>`;
+        } else if (entrega) {
+          const quem = entrega.entregador_nome || "motoboy";
+          acoes = `
+            <div class="entrega-info">
+              <strong>${quem}</strong> — ${STATUS_ENTREGA[entrega.status] || entrega.status}
+            </div>`;
+        }
+
+        const itens = (p.itens || []).map((i) => `${i.qtd}x ${i.nome}`).join(" • ");
 
         return `
         <article class="pedido">
@@ -151,7 +201,7 @@
           <div class="pedido__itens">${itens}</div>
           <div class="pedido__total">${formatar(p.total)}</div>
           <div class="pedido__acoes">
-            ${proximo}
+            ${acoes}
             <a class="btn-whatsapp" target="_blank"
                href="https://wa.me/?text=${encodeURIComponent(`Pedido #${p.codigo} — ${p.cliente_nome}: ${p.cliente_endereco}`)}">📲</a>
           </div>
@@ -159,58 +209,51 @@
         </article>`;
       }).join("");
 
-      document.querySelectorAll("[data-acao]").forEach((btn) => {
-        btn.addEventListener("click", () => mudarStatus(btn.dataset.id, btn.dataset.acao));
-      });
+      document.querySelectorAll("[data-acao]").forEach((btn) =>
+        btn.addEventListener("click", () => mudarStatus(btn.dataset.id, btn.dataset.acao)));
+      document.querySelectorAll("[data-despachar]").forEach((btn) =>
+        btn.addEventListener("click", () => despachar(btn.dataset.despachar, btn.dataset.motoboy)));
     }
 
-    /* ---------- Ações ---------- */
+    /* ---------- Ações da loja: SÓ preparar e despachar ---------- */
     async function mudarStatus(id, status) {
-      // Ao despachar: pergunta quem é o entregador e grava a entrega
-      if (status === "a_caminho") {
-        const pedido = pedidos.find((p) => p.id === id);
-        const nome = prompt("Nome do entregador:", "");
-        if (nome === null) return; // cancelou
-        const moto = prompt("Motinha (classica, esportiva ou street):", "classica") || "classica";
-
-        const { error: e1 } = await sb.from("pedidos").update({ status }).eq("id", id);
-        if (e1) { alert("Erro: " + e1.message); return; }
-
-        const { error: e2 } = await sb.from("entregas").insert({
-          pedido_id: id,
-          entregador_nome: nome.trim() || "Entregador",
-          moto: moto.trim().toLowerCase(),
-        });
-        if (e2) { alert("Pedido despachado, mas falhou ao gravar entrega: " + e2.message); return; }
-
-        alert(`🛵 ${nome} está com o pedido #${pedido.codigo}!\nO entregador abre o app e digita ${pedido.codigo}.`);
-        return;
-      }
-
       const { error } = await sb.from("pedidos").update({ status }).eq("id", id);
       if (error) alert("Erro: " + error.message);
     }
 
-    /* ---------- Tempo real ---------- */
-    async function carregar() {
-      const { data, error } = await sb
-        .from("pedidos")
-        .select("*")
-        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // últimas 24h
-        .order("created_at", { ascending: false });
-      if (!error) { pedidos = data || []; renderizar(); }
+    async function despachar(pedidoId, motoboyId) {
+      const pedido = pedidos.find((p) => p.id === pedidoId);
+      const motoboy = motoboys.find((m) => m.id === motoboyId);
+      if (!pedido || !motoboy) return;
+
+      const { error } = await sb.from("entregas").insert({
+        pedido_id: pedidoId,
+        motoboy_id: motoboyId,
+        entregador_nome: motoboy.nome,
+        moto: motoboy.moto,
+        status: "aguardando",
+      });
+      if (error) { alert("Erro ao despachar: " + error.message); return; }
+      // o pedido continua "pronto"; vira "a_caminho" só quando o motoboy confirmar a retirada
     }
 
-    sb.channel("pedidos-loja")
-      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, (mudanca) => {
-        if (mudanca.eventType === "INSERT") {
-          pedidos.unshift(mudanca.new);
-          apitarNovoPedido();
-        } else if (mudanca.eventType === "UPDATE") {
-          const i = pedidos.findIndex((p) => p.id === mudanca.new.id);
-          if (i >= 0) pedidos[i] = mudanca.new;
-        } else if (mudanca.eventType === "DELETE") {
-          pedidos = pedidos.filter((p) => p.id !== mudanca.old.id);
+    /* ---------- Tempo real ---------- */
+    sb.channel("painel-loja")
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, (m) => {
+        if (m.eventType === "INSERT") { pedidos.unshift(m.new); apitar(); carregarMotoboys(); }
+        else if (m.eventType === "UPDATE") {
+          const i = pedidos.findIndex((p) => p.id === m.new.id);
+          if (i >= 0) pedidos[i] = m.new;
+        } else {
+          pedidos = pedidos.filter((p) => p.id !== m.old.id);
+        }
+        renderizar();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "entregas" }, (m) => {
+        if (m.eventType === "DELETE") {
+          for (const k in entregas) if (entregas[k].id === m.old.id) delete entregas[k];
+        } else {
+          entregas[m.new.pedido_id] = m.new;
         }
         renderizar();
       })
@@ -218,8 +261,7 @@
         $("#statusConexao").textContent = s === "SUBSCRIBED" ? "ao vivo" : "conectando…";
       });
 
-    /* Bipe simples quando chega pedido novo */
-    function apitarNovoPedido() {
+    function apitar() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
@@ -232,7 +274,8 @@
       } catch { /* sem som, tudo bem */ }
     }
 
-    carregar();
+    carregarMotoboys();
+    carregarTudo();
   </script>
 </body>
 </html>
