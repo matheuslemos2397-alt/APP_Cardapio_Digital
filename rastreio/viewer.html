@@ -45,6 +45,11 @@
     }
     .status.ativo { color: #157a3f; font-weight: 600; }
     #mapa { flex: 1; min-height: 55dvh; background: #e9e4db; }
+    .marcador-moto {
+      background: none !important;
+      border: none !important;
+      filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+    }
     .aviso-demo {
       margin: 10px 16px; font-size: 0.75rem; color: #8a6d00;
       background: #fff8e0; border: 1px solid #ffe28a;
@@ -81,6 +86,41 @@
     const statusEl = $("#status");
 
     let mapa = null, marcador = null, canal = null, demoTimer = null;
+    let ultimaPos = null; // pra calcular a direção e girar a moto
+
+    /* Motinha em SVG — vira na direção do movimento */
+    const SVG_MOTO = `
+      <svg viewBox="0 0 64 64" width="44" height="44">
+        <g transform="rotate(90 32 32)">
+          <circle cx="14" cy="46" r="9" fill="#1c1c1e"/>
+          <circle cx="50" cy="46" r="9" fill="#1c1c1e"/>
+          <circle cx="14" cy="46" r="4" fill="#bbb"/>
+          <circle cx="50" cy="46" r="4" fill="#bbb"/>
+          <path d="M14 46 L26 28 L44 28 L50 46" stroke="#1faa59" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <circle cx="35" cy="22" r="7" fill="#1faa59"/>
+          <rect x="22" y="18" width="14" height="5" rx="2.5" fill="#1c1c1e"/>
+          <line x1="47" y1="26" x2="53" y2="18" stroke="#1c1c1e" stroke-width="4" stroke-linecap="round"/>
+        </g>
+      </svg>`;
+
+    const iconeMoto = (rotacao) =>
+      L.divIcon({
+        className: "marcador-moto",
+        html: `<div style="transform: rotate(${rotacao}deg); transition: transform .6s ease;">${SVG_MOTO}</div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      });
+
+    /* Direção (bearing) entre dois pontos, em graus */
+    function direcaoEntre(a, b) {
+      const rad = Math.PI / 180;
+      const dLng = (b[1] - a[1]) * rad;
+      const y = Math.sin(dLng) * Math.cos(b[0] * rad);
+      const x =
+        Math.cos(a[0] * rad) * Math.sin(b[0] * rad) -
+        Math.sin(a[0] * rad) * Math.cos(b[0] * rad) * Math.cos(dLng);
+      return (Math.atan2(y, x) * 180) / Math.PI + 90; // +90: a moto "olha" pra frente
+    }
 
     function setStatus(txt, ativo = false) {
       statusEl.textContent = txt;
@@ -89,13 +129,19 @@
 
     function receberPosicao({ lat, lng }) {
       const novaPos = [lat, lng];
+      const rotacao = ultimaPos && novaPos[0] !== ultimaPos[0]
+        ? direcaoEntre(ultimaPos, novaPos)
+        : 0;
+
       if (!marcador) {
-        marcador = L.marker(novaPos, { title: "Entregador" }).addTo(mapa);
+        marcador = L.marker(novaPos, { icon: iconeMoto(0), title: "Entregador" }).addTo(mapa);
         mapa.setView(novaPos, 16);
       } else {
+        marcador.setIcon(iconeMoto(rotacao));
         marcador.setLatLng(novaPos);
         mapa.panTo(novaPos, { animate: true });
       }
+      ultimaPos = novaPos;
       setStatus("Atualizado às " + new Date().toLocaleTimeString("pt-BR"), true);
     }
 
