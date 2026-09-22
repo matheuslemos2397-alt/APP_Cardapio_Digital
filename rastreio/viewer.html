@@ -44,6 +44,15 @@
       font-size: 0.8rem; color: #70706e;
     }
     .status.ativo { color: #157a3f; font-weight: 600; }
+    .status-pedido {
+      font-size: 0.85rem; font-weight: 700; text-align: center;
+      padding: 10px 14px; border-radius: 12px;
+      background: #f6f4f0; color: #70706e;
+    }
+    .status-pedido.recebido { background: #fff4e0; color: #b07500; }
+    .status-pedido.preparo { background: #e8f0ff; color: #2456c4; }
+    .status-pedido.a_caminho { background: #e7f7ee; color: #157a3f; }
+    .status-pedido.entregue { background: #eee; color: #555; }
     #mapa { flex: 1; min-height: 55dvh; background: #e9e4db; }
     .marcador-moto {
       background: none !important;
@@ -65,6 +74,7 @@
       <button id="btnAcompanhar">Acompanhar</button>
     </div>
     <div id="status" class="status">Digite o código e toque em Acompanhar</div>
+    <div id="statusPedido" class="status-pedido" hidden></div>
   </div>
 
   <div id="avisoDemo" class="aviso-demo" hidden>
@@ -146,6 +156,40 @@
       setStatus("Atualizado às " + new Date().toLocaleTimeString("pt-BR"), true);
     }
 
+    const TEXTO_STATUS = {
+      recebido: "🟡 Pedido recebido pela loja",
+      preparo: "🔵 Seu pedido está em preparo",
+      a_caminho: "🟢 SAIU PARA ENTREGA — motinha a caminho!",
+      entregue: "✅ Pedido entregue. Bom apetite!",
+    };
+    let canalStatus = null;
+
+    function mostrarStatusPedido(status) {
+      const el = $("#statusPedido");
+      el.hidden = false;
+      el.className = "status-pedido " + status;
+      el.textContent = TEXTO_STATUS[status] || status;
+    }
+
+    async function acompanharStatusPedido(codigo) {
+      if (canalStatus) { canalStatus.unsubscribe(); canalStatus = null; }
+
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // status atual
+      const { data } = await sb.from("pedidos").select("status").eq("codigo", codigo).maybeSingle();
+      if (data) mostrarStatusPedido(data.status);
+
+      // e atualiza ao vivo
+      canalStatus = sb
+        .channel("status-" + codigo)
+        .on("postgres_changes", {
+          event: "UPDATE", schema: "public", table: "pedidos",
+          filter: "codigo=eq." + codigo,
+        }, (m) => mostrarStatusPedido(m.new.status))
+        .subscribe();
+    }
+
     function parar() {
       if (canal) { canal.unsubscribe(); canal = null; }
       clearInterval(demoTimer);
@@ -173,6 +217,9 @@
         canal.subscribe((s) =>
           setStatus(s === "SUBSCRIBED" ? "Conectado — aguardando o entregador..." : "Conectando...", s === "SUBSCRIBED")
         );
+
+        // STATUS DO PEDIDO (em preparo, a caminho, entregue…)
+        acompanharStatusPedido(codigo);
       } else {
         // MODO SIMULAÇÃO: escuta o localStorage que o sender.html grava
         $("#avisoDemo").hidden = false;

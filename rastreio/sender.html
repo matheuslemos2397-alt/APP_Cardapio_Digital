@@ -44,6 +44,11 @@
     }
     .status.ativo { background: #e7f7ee; color: #157a3f; font-weight: 600; }
     .coords { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #70706e; text-align: center; }
+    .info-entrega {
+      background: #e8f0ff; border: 1px solid #b8d0ff;
+      border-radius: 12px; padding: 12px 14px; font-size: 0.85rem;
+    }
+    .info-entrega strong { display: block; margin-bottom: 2px; }
     .aviso-demo {
       font-size: 0.75rem; color: #8a6d00; background: #fff8e0;
       border: 1px solid #ffe28a; border-radius: 12px; padding: 10px 12px;
@@ -94,6 +99,7 @@
 
     <div id="status" class="status">Aguardando início</div>
     <div id="coords" class="coords">—</div>
+    <div id="infoEntrega" class="info-entrega" hidden></div>
 
     <div id="avisoDemo" class="aviso-demo" hidden>
       ⚠️ <strong>Modo local:</strong> Supabase ainda não configurado. Usando seu <strong>GPS real</strong>,
@@ -119,6 +125,7 @@
     const coordsEl = $("#coords");
     let rodando = false;
     let motoEscolhida = "classica";
+    const MOTOS_FILTROS = { classica: true, esportiva: true, street: true };
     let watchId = null;
     let demoTimer = null;
     let canal = null; // canal Supabase (broadcast)
@@ -143,9 +150,37 @@
       coordsEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 
-    function iniciar() {
+    async function iniciar() {
       const codigo = $("#codigo").value.trim().toUpperCase();
       if (!codigo) { setStatus("Digite um código primeiro"); return; }
+
+      // Busca os dados da entrega (pra onde ir + moto atribuída)
+      if (usarSupabase) {
+        const sbc = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data } = await sbc
+          .from("pedidos")
+          .select("cliente_nome, cliente_endereco, entregas(moto, entregador_nome)")
+          .eq("codigo", codigo)
+          .maybeSingle();
+
+        if (data) {
+          const entrega = (data.entregas && data.entregas[0]) || {};
+          $("#infoEntrega").hidden = false;
+          $("#infoEntrega").innerHTML =
+            `<strong>📦 Entrega #${codigo} — ${data.cliente_nome}</strong>` +
+            `📍 ${data.cliente_endereco}` +
+            (entrega.moto ? `<br />🏍️ Moto: ${entrega.moto}` : "") +
+            (entrega.entregador_nome ? ` • Entregador: ${entrega.entregador_nome}` : "");
+          if (entrega.moto && MOTOS_FILTROS[entrega.moto]) {
+            motoEscolhida = entrega.moto;
+            document.querySelectorAll("#motos button").forEach((b) =>
+              b.classList.toggle("selecionada", b.dataset.moto === entrega.moto));
+          }
+        } else {
+          $("#infoEntrega").hidden = false;
+          $("#infoEntrega").textContent = "⚠️ Nenhum pedido encontrado com esse código.";
+        }
+      }
 
       if (usarSupabase) {
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
