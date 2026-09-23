@@ -1,7 +1,7 @@
 /* Service Worker — cache first, network fallback.
    Ideal para cardápio: abre offline e permite instalar na tela inicial. */
 
-const CACHE = "cardapio-v16";
+const CACHE = "cardapio-v17";
 
 const ARQUIVOS = [
   "./",
