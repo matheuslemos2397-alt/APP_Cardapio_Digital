@@ -50,6 +50,7 @@
     .entrega__end { font-size: 0.9rem; color: #444; }
     .btn-pegar { background: #2456c4; color: #fff; }
     .btn-entregue { background: #1faa59; color: #fff; }
+    .btn-nav { background: #f6f4f0; color: #1c1c1e; border: 1px solid #e9e4db; }
     .btn-on { background: #e63946; color: #fff; }
     .status {
       font-size: 0.85rem; padding: 10px 14px; border-radius: 12px;
@@ -170,6 +171,7 @@
           </div>
           <div class="entrega__end"><strong>${p.cliente_nome}</strong><br />📍 ${p.cliente_endereco}</div>
           ${botoes}
+          <button class="btn-nav" data-nav="${encodeURIComponent(p.cliente_endereco)}">🧭 Navegar no Google Maps</button>
         </div>`;
       }).join("");
 
@@ -177,6 +179,9 @@
         b.addEventListener("click", () => confirmarRetirada(b.dataset.pegar)));
       box.querySelectorAll("[data-entregar]").forEach((b) =>
         b.addEventListener("click", () => confirmarEntrega(b.dataset.entregar)));
+      box.querySelectorAll("[data-nav]").forEach((b) =>
+        b.addEventListener("click", () =>
+          window.open(`https://www.google.com/maps/dir/?api=1&destination=${b.dataset.nav}`, "_blank")));
     }
 
     /* ---------- Ações que movem o sistema ---------- */
